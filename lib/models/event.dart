@@ -1,91 +1,168 @@
-// lib/models/event.dart
+﻿import 'package:uuid/uuid.dart';
 
-import 'package:flutter/material.dart';
-import 'package:yahou_calender/models/recurrence_rule.dart';
+enum RecurrenceType {
+  none,
+  daily,
+  weekly,
+  monthly,
+  yearly
+}
 
 class Event {
   final String id;
-  String title;
-  String description;
-  DateTime startTime;
-  DateTime endTime;
-  Color color;
-  RecurrenceRule? recurrenceRule;
-  DateTime? reminderTime;
+  final String title;
+  final DateTime startTime;
+  final DateTime endTime;
+  final String? description;
+  final bool isAllDay;
+  final String? location;
+  final int colorIndex;
+  final RecurrenceType recurrenceType;
+  final DateTime? recurrenceEndDate;
+  final List<int>? weeklyDays; // 週次繰り返しの場合の曜日（1-7）
+  final int? monthlyDay; // 月次繰り返しの場合の日付（1-31）
 
   Event({
-    required this.id,
+    String? id,
     required this.title,
-    this.description = '',
     required this.startTime,
     required this.endTime,
-    this.color = Colors.blue,
-    this.recurrenceRule,
-    this.reminderTime,
-  });
+    this.description,
+    this.isAllDay = false,
+    this.location,
+    this.colorIndex = 0,
+    this.recurrenceType = RecurrenceType.none,
+    this.recurrenceEndDate,
+    this.weeklyDays,
+    this.monthlyDay,
+  }) : id = id ?? const Uuid().v4();
 
-  bool get isMultiDay => !isSameDay(startTime, endTime);
+  Event copyWith({
+    String? title,
+    DateTime? startTime,
+    DateTime? endTime,
+    String? description,
+    bool? isAllDay,
+    String? location,
+    int? colorIndex,
+    RecurrenceType? recurrenceType,
+    DateTime? recurrenceEndDate,
+    List<int>? weeklyDays,
+    int? monthlyDay,
+  }) {
+    return Event(
+      id: id,
+      title: title ?? this.title,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      description: description ?? this.description,
+      isAllDay: isAllDay ?? this.isAllDay,
+      location: location ?? this.location,
+      colorIndex: colorIndex ?? this.colorIndex,
+      recurrenceType: recurrenceType ?? this.recurrenceType,
+      recurrenceEndDate: recurrenceEndDate ?? this.recurrenceEndDate,
+      weeklyDays: weeklyDays ?? this.weeklyDays,
+      monthlyDay: monthlyDay ?? this.monthlyDay,
+    );
+  }
 
-  List<Event> splitMultiDayEvent() {
-    if (!isMultiDay) return [this];
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'startTime': startTime.toIso8601String(),
+    'endTime': endTime.toIso8601String(),
+    'description': description,
+    'isAllDay': isAllDay ? 1 : 0,
+    'location': location,
+    'colorIndex': colorIndex,
+    'recurrenceType': recurrenceType.index,
+    'recurrenceEndDate': recurrenceEndDate?.toIso8601String(),
+    'weeklyDays': weeklyDays?.join(","),
+    'monthlyDay': monthlyDay,
+  };
 
-    List<Event> splitEvents = [];
-    DateTime currentStart = startTime;
-    int dayCount = 0;
+  factory Event.fromJson(Map<String, dynamic> json) => Event(
+    id: json['id'],
+    title: json['title'],
+    startTime: DateTime.parse(json['startTime']),
+    endTime: DateTime.parse(json['endTime']),
+    description: json['description'],
+    isAllDay: json['isAllDay'] == 1,
+    location: json['location'],
+    colorIndex: json['colorIndex'],
+    recurrenceType: RecurrenceType.values[json['recurrenceType'] ?? 0],
+    recurrenceEndDate: json['recurrenceEndDate'] != null 
+        ? DateTime.parse(json['recurrenceEndDate'])
+        : null,
+    weeklyDays: json['weeklyDays'] != null 
+        ? json['weeklyDays'].split(",").map<int>((e) => int.parse(e)).toList()
+        : null,
+    monthlyDay: json['monthlyDay'],
+  );
 
-    while (currentStart.isBefore(endTime)) {
-      DateTime currentEnd = DateTime(currentStart.year, currentStart.month, currentStart.day, 23, 59, 59);
-      if (currentEnd.isAfter(endTime)) currentEnd = endTime;
-
-      splitEvents.add(Event(
-        id: '$id-$dayCount',
-        title: title,
-        description: description,
-        startTime: currentStart,
-        endTime: currentEnd,
-        color: color,
-        recurrenceRule: dayCount == 0 ? recurrenceRule : null,
-        reminderTime: dayCount == 0 ? reminderTime : null,
-      ));
-
-      currentStart = DateTime(currentStart.year, currentStart.month, currentStart.day + 1);
-      dayCount++;
+  List<DateTime> generateRecurrenceInstances(DateTime until) {
+    if (recurrenceType == RecurrenceType.none) {
+      return [startTime];
     }
 
-    return splitEvents;
-  }
+    final List<DateTime> instances = [];
+    DateTime current = startTime;
+    final endDate = recurrenceEndDate ?? until;
 
-  bool isSameDay(DateTime date1, DateTime date2) {
-    return date1.year == date2.year && date1.month == date2.month && date1.day == date2.day;
-  }
+    while (current.isBefore(endDate)) {
+      instances.add(current);
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'title': title,
-      'description': description,
-      'startTime': startTime.toIso8601String(),
-      'endTime': endTime.toIso8601String(),
-      'color': color.value,
-      'recurrenceRule': recurrenceRule?.toMap(),
-      'reminderTime': reminderTime?.toIso8601String(),
-    };
-  }
+      switch (recurrenceType) {
+        case RecurrenceType.daily:
+          current = current.add(const Duration(days: 1));
+          break;
+        case RecurrenceType.weekly:
+          if (weeklyDays != null && weeklyDays!.isNotEmpty) {
+            // 次の指定曜日を見つける
+            var nextDay = current;
+            do {
+              nextDay = nextDay.add(const Duration(days: 1));
+            } while (!weeklyDays!.contains(nextDay.weekday));
+            current = nextDay;
+          } else {
+            current = current.add(const Duration(days: 7));
+          }
+          break;
+        case RecurrenceType.monthly:
+          if (monthlyDay != null) {
+            // 指定された日付の次の月
+            current = DateTime(
+              current.year,
+              current.month + 1,
+              monthlyDay!,
+              current.hour,
+              current.minute,
+            );
+          } else {
+            // 同じ日の次の月
+            current = DateTime(
+              current.year,
+              current.month + 1,
+              current.day,
+              current.hour,
+              current.minute,
+            );
+          }
+          break;
+        case RecurrenceType.yearly:
+          current = DateTime(
+            current.year + 1,
+            current.month,
+            current.day,
+            current.hour,
+            current.minute,
+          );
+          break;
+        case RecurrenceType.none:
+          break;
+      }
+    }
 
-  factory Event.fromMap(Map<String, dynamic> map) {
-    return Event(
-      id: map['id'],
-      title: map['title'],
-      description: map['description'],
-      startTime: DateTime.parse(map['startTime']),
-      endTime: DateTime.parse(map['endTime']),
-      color: Color(map['color']),
-      recurrenceRule: map['recurrenceRule'] != null
-          ? RecurrenceRule.fromMap(map['recurrenceRule'])
-          : null,
-      reminderTime: map['reminderTime'] != null
-          ? DateTime.parse(map['reminderTime'])
-          : null,
-    );
+    return instances;
   }
 }

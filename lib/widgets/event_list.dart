@@ -1,53 +1,67 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:yahou_calender/services/event_service.dart';
-import 'package:yahou_calender/views/event_detail_page.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/event_provider.dart';
+import '../models/event.dart';
+import 'package:intl/intl.dart';
 
-class EventList extends StatelessWidget {
-  final DateTime selectedDate;
-
-  const EventList({
-    super.key,  // ここを変更
-    required this.selectedDate,
-  });
+class EventList extends ConsumerWidget {
+  const EventList({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final eventService = Provider.of<EventService>(context);
-    final events = eventService.getEventsForDay(selectedDate);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedDate = ref.watch(selectedDateProvider);
+    final events = ref.watch(eventListProvider).where((event) {
+      return ref.read(eventListProvider.notifier).getEventsForDay(selectedDate).contains(event);
+    }).toList();
+
+    if (events.isEmpty) {
+      return const Center(
+        child: Text('予定はありません'),
+      );
+    }
 
     return ListView.builder(
       itemCount: events.length,
       itemBuilder: (context, index) {
         final event = events[index];
-        return ListTile(
-          title: Text(event.title),
-          subtitle: Text('${_formatTime(event.startTime)} - ${_formatTime(event.endTime)}'),
-          leading: Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: event.color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => EventDetailPage(
-                  event: event,
-                  selectedDate: selectedDate,
-                ),
-              ),
-            );
-          },
-        );
+        return EventCard(event: event);
       },
     );
   }
+}
 
-  String _formatTime(DateTime dateTime) {
-    return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+class EventCard extends StatelessWidget {
+  final Event event;
+
+  const EventCard({super.key, required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    final timeFormat = DateFormat.Hm();
+    
+    return Card(
+      child: ListTile(
+        leading: Container(
+          width: 4,
+          height: 50,
+          color: Colors.blue,
+        ),
+        title: Text(
+          event.title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(
+          event.isAllDay 
+              ? '終日'
+              : '${timeFormat.format(event.startTime)} - ${timeFormat.format(event.endTime)}',
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () {
+          // TODO: イベント詳細画面へ遷移
+        },
+      ),
+    );
   }
 }

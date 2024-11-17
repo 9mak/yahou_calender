@@ -1,4 +1,4 @@
-package com.example.yahou_calender
+package com.example.calender_app
 
 import io.flutter.embedding.android.FlutterActivity
 
