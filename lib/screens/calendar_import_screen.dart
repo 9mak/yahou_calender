@@ -13,60 +13,75 @@ class CalendarImportScreen extends ConsumerStatefulWidget {
 
 class _CalendarImportScreenState extends ConsumerState<CalendarImportScreen> {
   bool _isLoading = false;
+  String? _error;
+  final _syncService = CalendarSyncService();
 
-  Future<void> _importFromGoogle() async {
-    setState(() => _isLoading = true);
+  Future<void> _importEvents() async {
     try {
-      final events = await CalendarSyncService.importGoogleCalendar();
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final events = await _syncService.importFromGoogle();
       for (final event in events) {
         await ref.read(eventListProvider.notifier).addEvent(event);
       }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Googleカレンダーからインポートしました')),
-        );
-      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('インポートが完了しました')),
+      );
+      Navigator.pop(context);
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('エラーが発生しました: $e')),
-        );
-      }
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+      });
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  Future<void> _importFromICS() async {
+  Future<void> _importIcsFile() async {
     try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['ics'],
       );
 
       if (result != null) {
-        setState(() => _isLoading = true);
-        final fileContent = String.fromCharCodes(result.files.first.bytes!);
-        final events = await CalendarSyncService.importICSFile(fileContent);
-        
+        final events = await _syncService.importFromIcs(result.files.first);
         for (final event in events) {
           await ref.read(eventListProvider.notifier).addEvent(event);
         }
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('ICSファイルからインポートしました')),
-          );
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ファイルのインポートが完了しました')),
+        );
+        Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('エラーが発生しました: $e')),
-        );
-      }
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+      });
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -76,33 +91,36 @@ class _CalendarImportScreenState extends ConsumerState<CalendarImportScreen> {
       appBar: AppBar(
         title: const Text('カレンダーのインポート'),
       ),
-      body: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _isLoading ? null : _importFromGoogle,
-                  icon: const Icon(Icons.calendar_today),
-                  label: const Text('Googleカレンダーからインポート'),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: _isLoading ? null : _importFromICS,
-                  icon: const Icon(Icons.file_upload),
-                  label: const Text('ICSファイルからインポート'),
-                ),
-              ],
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_error != null)
+                    Card(
+                      color: Colors.red[100],
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          _error!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ),
+                  ElevatedButton(
+                    onPressed: _importEvents,
+                    child: const Text('Googleカレンダーからインポート'),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _importIcsFile,
+                    child: const Text('ICSファイルからインポート'),
+                  ),
+                ],
+              ),
             ),
-          ),
-          if (_isLoading)
-            const Center(
-              child: CircularProgressIndicator(),
-            ),
-        ],
-      ),
     );
   }
 }

@@ -1,89 +1,60 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
 import '../providers/event_provider.dart';
-import '../models/event.dart';
+import '../screens/settings_screen.dart';
 
-class CalendarView extends ConsumerStatefulWidget {
+class CalendarView extends ConsumerWidget {
   const CalendarView({super.key});
 
   @override
-  ConsumerState<CalendarView> createState() => _CalendarViewState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedDate = ref.watch(selectedDateProvider);
+    final calendarViewType = ref.watch(calendarViewProvider);
+    final events = ref.watch(eventListProvider);
 
-class _CalendarViewState extends ConsumerState<CalendarView> {
-  CalendarFormat _calendarFormat = CalendarFormat.month;
-  DateTime _focusedDay = DateTime.now();
-  DateTime? _selectedDay;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedDay = _focusedDay;
-  }
-
-  void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
-    if (!isSameDay(_selectedDay, selectedDay)) {
-      setState(() {
-        _selectedDay = selectedDay;
-        _focusedDay = focusedDay;
-      });
-      ref.read(selectedDateProvider.notifier).state = selectedDay;
+    CalendarFormat getCalendarFormat() {
+      switch (calendarViewType) {
+        case CalendarViewType.month:
+          return CalendarFormat.month;
+        case CalendarViewType.week:
+          return CalendarFormat.week;
+        case CalendarViewType.day:
+          return CalendarFormat.week; // tableCalendarには日表示がないため、週表示で代用
+      }
     }
-  }
 
-  @override
-  Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.all(8.0),
-      child: TableCalendar<Event>(
+      child: TableCalendar(
         firstDay: DateTime.utc(2020, 1, 1),
         lastDay: DateTime.utc(2030, 12, 31),
-        focusedDay: _focusedDay,
-        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-        calendarFormat: _calendarFormat,
-        onDaySelected: _onDaySelected,
-        onFormatChanged: (format) {
-          if (_calendarFormat != format) {
-            setState(() {
-              _calendarFormat = format;
-            });
-          }
+        focusedDay: selectedDate,
+        calendarFormat: getCalendarFormat(),
+        selectedDayPredicate: (day) => isSameDay(selectedDate, day),
+        onDaySelected: (selectedDay, focusedDay) {
+          ref.read(selectedDateProvider.notifier).state = selectedDay;
         },
         eventLoader: (day) {
           return ref.read(eventListProvider.notifier).getEventsForDay(day);
         },
         calendarStyle: const CalendarStyle(
-          outsideDaysVisible: false,
-          markersMaxCount: 4,
-          markerSize: 6,
-          markerDecoration: BoxDecoration(
+          todayDecoration: BoxDecoration(
             color: Colors.blue,
             shape: BoxShape.circle,
           ),
           selectedDecoration: BoxDecoration(
-            color: Colors.blue,
-            shape: BoxShape.rectangle,
-            borderRadius: BorderRadius.all(Radius.circular(4)),
+            color: Colors.deepPurple,
+            shape: BoxShape.circle,
           ),
-          todayDecoration: BoxDecoration(
-            color: Colors.blueAccent,
-            shape: BoxShape.rectangle,
-            borderRadius: BorderRadius.all(Radius.circular(4)),
+          markerDecoration: BoxDecoration(
+            color: Colors.green,
+            shape: BoxShape.circle,
           ),
-          markersAlignment: Alignment.bottomCenter,
-          markerMargin: EdgeInsets.only(top: 4),
         ),
-        headerStyle: HeaderStyle(
+        headerStyle: const HeaderStyle(
+          formatButtonVisible: false,
           titleCentered: true,
-          formatButtonVisible: true,
-          formatButtonShowsNext: false,
-          formatButtonDecoration: BoxDecoration(
-            color: Colors.blue,
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-          formatButtonTextStyle: const TextStyle(color: Colors.white),
         ),
       ),
     );

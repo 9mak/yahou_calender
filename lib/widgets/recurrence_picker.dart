@@ -1,5 +1,5 @@
-ï»¿import 'package:flutter/material.dart';
-import '../models/event.dart';
+import 'package:flutter/material.dart';
+import '../models/recurrence.dart';
 
 class RecurrencePicker extends StatefulWidget {
   final RecurrenceType initialValue;
@@ -32,19 +32,19 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
   List<Widget> _buildRecurrenceOptions() {
     final List<Widget> options = [
       RadioListTile<RecurrenceType>(
-        title: const Text('ç¹°ã‚Šè¿”ã—ãªã—'),
+        title: const Text('ŒJ‚è•Ô‚µ‚È‚µ'),
         value: RecurrenceType.none,
         groupValue: _selectedType,
         onChanged: _updateRecurrenceType,
       ),
       RadioListTile<RecurrenceType>(
-        title: const Text('æ¯æ—¥'),
+        title: const Text('–ˆ“ú'),
         value: RecurrenceType.daily,
         groupValue: _selectedType,
         onChanged: _updateRecurrenceType,
       ),
       RadioListTile<RecurrenceType>(
-        title: const Text('æ¯é€±'),
+        title: const Text('–ˆT'),
         value: RecurrenceType.weekly,
         groupValue: _selectedType,
         onChanged: _updateRecurrenceType,
@@ -75,7 +75,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
           ),
         ),
       RadioListTile<RecurrenceType>(
-        title: const Text('æ¯æœˆ'),
+        title: const Text('–ˆŒ'),
         value: RecurrenceType.monthly,
         groupValue: _selectedType,
         onChanged: _updateRecurrenceType,
@@ -88,7 +88,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
             items: List.generate(31, (index) => index + 1).map((day) {
               return DropdownMenuItem(
                 value: day,
-                child: Text('$dayæ—¥'),
+                child: Text('$day“ú'),
               );
             }).toList(),
             onChanged: (value) {
@@ -100,7 +100,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
           ),
         ),
       RadioListTile<RecurrenceType>(
-        title: const Text('æ¯å¹´'),
+        title: const Text('–ˆ”N'),
         value: RecurrenceType.yearly,
         groupValue: _selectedType,
         onChanged: _updateRecurrenceType,
@@ -113,7 +113,7 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              const Text('çµ‚äº†æ—¥: '),
+              const Text('I—¹“ú: '),
               TextButton(
                 onPressed: () async {
                   final picked = await showDatePicker(
@@ -130,8 +130,8 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
                   }
                 },
                 child: Text(_endDate != null
-                    ? '${_endDate!.year}å¹´${_endDate!.month}æœˆ${_endDate!.day}æ—¥'
-                    : 'é¸æŠã—ã¦ãã ã•ã„'),
+                    ? '${_endDate!.year}”N${_endDate!.month}Œ${_endDate!.day}“ú'
+                    : '‘I‘ğ‚µ‚Ä‚­‚¾‚³‚¢'),
               ),
             ],
           ),
@@ -158,13 +158,13 @@ class _RecurrencePickerState extends State<RecurrencePicker> {
 
   String _getWeekdayShortName(int weekday) {
     switch (weekday) {
-      case 1: return 'æœˆ';
-      case 2: return 'ç«';
-      case 3: return 'æ°´';
-      case 4: return 'æœ¨';
-      case 5: return 'é‡‘';
-      case 6: return 'åœŸ';
-      case 7: return 'æ—¥';
+      case 1: return 'Œ';
+      case 2: return '‰Î';
+      case 3: return '…';
+      case 4: return '–Ø';
+      case 5: return '‹à';
+      case 6: return '“y';
+      case 7: return '“ú';
       default: return '';
     }
   }

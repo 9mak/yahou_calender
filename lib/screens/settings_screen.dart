@@ -1,63 +1,11 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../utils/preferences_helper.dart';
 
-final themeProvider = StateNotifierProvider<ThemeNotifier, ThemeMode>((ref) {
-  return ThemeNotifier();
-});
+final themeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
+final notificationEnabledProvider = StateProvider<bool>((ref) => true);
+final calendarViewProvider = StateProvider<CalendarViewType>((ref) => CalendarViewType.month);
 
-class ThemeNotifier extends StateNotifier<ThemeMode> {
-  ThemeNotifier() : super(ThemeMode.system) {
-    _loadTheme();
-  }
-
-  Future<void> _loadTheme() async {
-    state = await PreferencesHelper.loadThemeMode();
-  }
-
-  Future<void> setTheme(ThemeMode mode) async {
-    await PreferencesHelper.saveThemeMode(mode);
-    state = mode;
-  }
-}
-
-final startWeekdayProvider = StateNotifierProvider<StartWeekdayNotifier, int>((ref) {
-  return StartWeekdayNotifier();
-});
-
-class StartWeekdayNotifier extends StateNotifier<int> {
-  StartWeekdayNotifier() : super(DateTime.monday) {
-    _loadStartWeekday();
-  }
-
-  Future<void> _loadStartWeekday() async {
-    state = await PreferencesHelper.loadStartWeekday();
-  }
-
-  Future<void> setStartWeekday(int weekday) async {
-    await PreferencesHelper.saveStartWeekday(weekday);
-    state = weekday;
-  }
-}
-
-final defaultViewProvider = StateNotifierProvider<DefaultViewNotifier, String>((ref) {
-  return DefaultViewNotifier();
-});
-
-class DefaultViewNotifier extends StateNotifier<String> {
-  DefaultViewNotifier() : super("月") {
-    _loadDefaultView();
-  }
-
-  Future<void> _loadDefaultView() async {
-    state = await PreferencesHelper.loadDefaultView();
-  }
-
-  Future<void> setDefaultView(String view) async {
-    await PreferencesHelper.saveDefaultView(view);
-    state = view;
-  }
-}
+enum CalendarViewType { month, week, day }
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -65,8 +13,8 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeProvider);
-    final startWeekday = ref.watch(startWeekdayProvider);
-    final defaultView = ref.watch(defaultViewProvider);
+    final notificationEnabled = ref.watch(notificationEnabledProvider);
+    final calendarView = ref.watch(calendarViewProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -75,128 +23,121 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         children: [
           ListTile(
-            title: const Text('テーマ設定'),
+            leading: const Icon(Icons.color_lens),
+            title: const Text('テーマ'),
             subtitle: Text(
-              switch (themeMode) {
-                ThemeMode.system => 'システム設定に従う',
-                ThemeMode.light => 'ライトモード',
-                ThemeMode.dark => 'ダークモード',
-              }
+              themeMode == ThemeMode.system
+                  ? 'システム設定に従う'
+                  : themeMode == ThemeMode.light
+                      ? 'ライトモード'
+                      : 'ダークモード',
             ),
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) => SimpleDialog(
-                  title: const Text('テーマ設定'),
-                  children: [
-                    RadioListTile(
-                      title: const Text('システム設定に従う'),
-                      value: ThemeMode.system,
-                      groupValue: themeMode,
-                      onChanged: (value) {
-                        ref.read(themeProvider.notifier).setTheme(value!);
-                        Navigator.pop(context);
-                      },
-                    ),
-                    RadioListTile(
-                      title: const Text('ライトモード'),
-                      value: ThemeMode.light,
-                      groupValue: themeMode,
-                      onChanged: (value) {
-                        ref.read(themeProvider.notifier).setTheme(value!);
-                        Navigator.pop(context);
-                      },
-                    ),
-                    RadioListTile(
-                      title: const Text('ダークモード'),
-                      value: ThemeMode.dark,
-                      groupValue: themeMode,
-                      onChanged: (value) {
-                        ref.read(themeProvider.notifier).setTheme(value!);
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ],
-                ),
-              );
+            onTap: () => _showThemeDialog(context, ref),
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.notifications),
+            title: const Text('通知'),
+            subtitle: const Text('イベントの通知を有効にする'),
+            value: notificationEnabled,
+            onChanged: (value) {
+              ref.read(notificationEnabledProvider.notifier).state = value;
             },
           ),
           ListTile(
-            title: const Text('週の開始曜日'),
+            leading: const Icon(Icons.calendar_today),
+            title: const Text('表示設定'),
             subtitle: Text(
-              switch (startWeekday) {
-                DateTime.monday => '月曜日',
-                DateTime.sunday => '日曜日',
-                _ => '月曜日',
-              }
+              calendarView == CalendarViewType.month
+                  ? '月表示'
+                  : calendarView == CalendarViewType.week
+                      ? '週表示'
+                      : '日表示',
             ),
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) => SimpleDialog(
-                  title: const Text('週の開始曜日'),
-                  children: [
-                    RadioListTile(
-                      title: const Text('月曜日'),
-                      value: DateTime.monday,
-                      groupValue: startWeekday,
-                      onChanged: (value) {
-                        ref.read(startWeekdayProvider.notifier).setStartWeekday(value!);
-                        Navigator.pop(context);
-                      },
-                    ),
-                    RadioListTile(
-                      title: const Text('日曜日'),
-                      value: DateTime.sunday,
-                      groupValue: startWeekday,
-                      onChanged: (value) {
-                        ref.read(startWeekdayProvider.notifier).setStartWeekday(value!);
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          ListTile(
-            title: const Text('デフォルト表示'),
-            subtitle: Text(defaultView),
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) => SimpleDialog(
-                  title: const Text('デフォルト表示'),
-                  children: [
-                    RadioListTile(
-                      title: const Text('月表示'),
-                      value: "月",
-                      groupValue: defaultView,
-                      onChanged: (value) {
-                        ref.read(defaultViewProvider.notifier).setDefaultView(value!);
-                        Navigator.pop(context);
-                      },
-                    ),
-                    RadioListTile(
-                      title: const Text('週表示'),
-                      value: "週",
-                      groupValue: defaultView,
-                      onChanged: (value) {
-                        ref.read(defaultViewProvider.notifier).setDefaultView(value!);
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-          const Divider(),
-          ListTile(
-            title: const Text('バージョン情報'),
-            subtitle: const Text('1.0.0'),
+            onTap: () => _showViewDialog(context, ref),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showThemeDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('テーマ設定'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<ThemeMode>(
+              title: const Text('システム設定に従う'),
+              value: ThemeMode.system,
+              groupValue: ref.read(themeProvider),
+              onChanged: (value) {
+                ref.read(themeProvider.notifier).state = value!;
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('ライトモード'),
+              value: ThemeMode.light,
+              groupValue: ref.read(themeProvider),
+              onChanged: (value) {
+                ref.read(themeProvider.notifier).state = value!;
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<ThemeMode>(
+              title: const Text('ダークモード'),
+              value: ThemeMode.dark,
+              groupValue: ref.read(themeProvider),
+              onChanged: (value) {
+                ref.read(themeProvider.notifier).state = value!;
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showViewDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('表示設定'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<CalendarViewType>(
+              title: const Text('月表示'),
+              value: CalendarViewType.month,
+              groupValue: ref.read(calendarViewProvider),
+              onChanged: (value) {
+                ref.read(calendarViewProvider.notifier).state = value!;
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<CalendarViewType>(
+              title: const Text('週表示'),
+              value: CalendarViewType.week,
+              groupValue: ref.read(calendarViewProvider),
+              onChanged: (value) {
+                ref.read(calendarViewProvider.notifier).state = value!;
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<CalendarViewType>(
+              title: const Text('日表示'),
+              value: CalendarViewType.day,
+              groupValue: ref.read(calendarViewProvider),
+              onChanged: (value) {
+                ref.read(calendarViewProvider.notifier).state = value!;
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,22 +1,12 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'screens/home_screen.dart';
+import './screens/home_screen.dart';
 import 'screens/settings_screen.dart';
-import 'config/theme.dart';
-import 'utils/database_helper.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // データベースの初期化を待機
-  await DatabaseHelper.database;
-  
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends ConsumerWidget {
@@ -25,12 +15,23 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeProvider);
-
+    
     return MaterialApp(
-      title: 'カレンダーアプリ',
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
+      title: 'Yahoo Calendar',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
+      ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
       themeMode: themeMode,
+      locale: const Locale('ja', ''),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -38,7 +39,6 @@ class MyApp extends ConsumerWidget {
       ],
       supportedLocales: const [
         Locale('ja', ''),
-        Locale('en', ''),
       ],
       home: const HomeScreen(),
     );

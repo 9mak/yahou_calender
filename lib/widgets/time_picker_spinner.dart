@@ -1,4 +1,4 @@
-ï»¿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 class TimePickerSpinner extends StatefulWidget {
   final TimeOfDay time;
@@ -40,7 +40,7 @@ class _TimePickerSpinnerState extends State<TimePickerSpinner> {
       child: Column(
         children: [
           Text(
-            'æ™‚åˆ»ã‚’é¸æŠ',
+            '‚ğ‘I‘ğ',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 20),
@@ -136,7 +136,7 @@ class _TimePickerSpinnerState extends State<TimePickerSpinner> {
             children: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('ã‚­ãƒ£ãƒ³ã‚»ãƒ«'),
+                child: const Text('ƒLƒƒƒ“ƒZƒ‹'),
               ),
               const SizedBox(width: 8),
               TextButton(
@@ -148,7 +148,7 @@ class _TimePickerSpinnerState extends State<TimePickerSpinner> {
                     ),
                   );
                 },
-                child: const Text('å®Œäº†'),
+                child: const Text('Š®—¹'),
               ),
             ],
           ),

@@ -1,81 +1,46 @@
 ﻿import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
-import '../models/event.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 class NotificationHelper {
-  static final FlutterLocalNotificationsPlugin _notifications =
+  static final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
-  static bool _initialized = false;
 
-  static Future<void> initialize() async {
-    if (_initialized) return;
+  static Future<void> init() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('app_icon');
+    const DarwinInitializationSettings initializationSettingsIOS =
+        DarwinInitializationSettings();
+    const InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsIOS,
+    );
 
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
     tz.initializeTimeZones();
-
-    const androidInitialize = AndroidInitializationSettings('app_icon');
-    const iOSInitialize = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-    const initializationSettings = InitializationSettings(
-      android: androidInitialize,
-      iOS: iOSInitialize,
-    );
-
-    await _notifications.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // 通知タップ時の処理
-      },
-    );
-
-    _initialized = true;
   }
 
-  static Future<void> scheduleEventNotification(Event event, {
-    Duration? reminderBefore,
-  }) async {
-    await initialize();
-
-    reminderBefore ??= const Duration(minutes: 30);
-    final scheduledDate = event.startTime.subtract(reminderBefore);
-
-    if (scheduledDate.isBefore(DateTime.now())) {
-      return;
-    }
-
-    await _notifications.zonedSchedule(
-      event.id.hashCode,
-      '予定のリマインダー',
-      '${event.title} が ${reminderBefore.inMinutes} 分後に開始します',
+  static Future<void> scheduleEventNotification(
+    String title,
+    String body,
+    DateTime scheduledDate,
+  ) async {
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      0,
+      title,
+      body,
       tz.TZDateTime.from(scheduledDate, tz.local),
-      NotificationDetails(
+      const NotificationDetails(
         android: AndroidNotificationDetails(
-          'event_reminder',
-          'Event Reminders',
-          channelDescription: 'Notifications for calendar events',
-          importance: Importance.high,
+          'event_notification_channel',
+          'Event Notifications',
+          importance: Importance.max,
           priority: Priority.high,
         ),
-        iOS: const DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-        ),
       ),
-      androidAllowWhileIdle: true,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
     );
-  }
-
-  static Future<void> cancelEventNotification(Event event) async {
-    await _notifications.cancel(event.id.hashCode);
-  }
-
-  static Future<void> cancelAllNotifications() async {
-    await _notifications.cancelAll();
   }
 }
